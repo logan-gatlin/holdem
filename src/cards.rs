@@ -168,6 +168,16 @@ impl std::str::FromStr for Card {
     }
 }
 
+pub fn parse_cards(input: &str) -> Option<Vec<Card>> {
+    input
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .array_chunks()
+        .map(|[a, b]| format!("{a}{b}").parse::<Card>())
+        .try_collect()
+        .ok()
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Hand(pub [Card; 5]);
 

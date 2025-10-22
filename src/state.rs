@@ -1,6 +1,19 @@
 use crate::{cards::*, rank::*};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Position {
+    BigBlind = 0,
+    SmallBlind = 1,
+    Button = 2,
+    Cutoff = 3,
+    Hijack = 4,
+    Lojack = 5,
+    UTG2 = 6,
+    UTG1 = 7,
+    UTG = 8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Board {
     PreFlop,
     Flop([Card; 3]),

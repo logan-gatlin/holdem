@@ -1,7 +1,8 @@
 use crate::{cards::*, rank::*};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Position {
+    #[default]
     BigBlind = 0,
     SmallBlind = 1,
     Button = 2,
@@ -11,6 +12,56 @@ pub enum Position {
     UTG2 = 6,
     UTG1 = 7,
     UTG = 8,
+}
+
+impl std::fmt::Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Position::BigBlind => "BB",
+                Position::SmallBlind => "SB",
+                Position::Button => "BTN",
+                Position::Cutoff => "CO",
+                Position::Hijack => "HJ",
+                Position::Lojack => "LJ",
+                Position::UTG2 => "UTG+2",
+                Position::UTG1 => "UTG+1",
+                Position::UTG => "UTG",
+            }
+        )
+    }
+}
+
+impl Position {
+    pub const ALL: [Position; 9] = [
+        Self::BigBlind,
+        Self::SmallBlind,
+        Self::Button,
+        Self::Cutoff,
+        Self::Hijack,
+        Self::Lojack,
+        Self::UTG2,
+        Self::UTG1,
+        Self::UTG,
+    ];
+
+    pub fn with_n_players(n: usize) -> &'static [Position] {
+        use Position::*;
+        match n {
+            2 => &[BigBlind, SmallBlind],
+            3 => &[BigBlind, SmallBlind, UTG],
+            4 => &[BigBlind, SmallBlind, Button, UTG],
+            5 => &[BigBlind, SmallBlind, Button, Cutoff, UTG],
+            6 => &[BigBlind, SmallBlind, Button, Cutoff, Hijack, UTG],
+            7 => &[BigBlind, SmallBlind, Button, Cutoff, Hijack, Lojack, UTG],
+            8 => &[
+                BigBlind, SmallBlind, Button, Cutoff, Hijack, Lojack, UTG1, UTG,
+            ],
+            _ => &Self::ALL,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,7 +88,7 @@ impl IntoIterator for Board {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DeckState {
     /// Cards currently on the board
     pub board: Board,

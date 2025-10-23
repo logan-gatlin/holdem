@@ -1,8 +1,10 @@
 use itertools::Itertools;
 
+use crate::parse::Parse;
+
 macro_rules! card {
     ($e:expr) => {
-        $e.parse::<crate::cards::Card>().unwrap()
+        <Card as crate::parse::Parse>::parse(&mut $e.chars()).unwrap()
     };
 }
 
@@ -25,6 +27,20 @@ pub fn deck_without(cards: impl IntoIterator<Item = Card>) -> Vec<Card> {
     deck().into_iter().filter(|c| !cards.contains(c)).collect()
 }
 
+pub fn unique_open_hands() -> Vec<[Card; 2]> {
+    let mut cards = vec![];
+    for f1 in Face::ALL {
+        for f2 in Face::ALL {
+            cards.push(if f1 <= f2 {
+                [Card(f1, Suite::Heart), Card(f2, Suite::Spade)]
+            } else {
+                [Card(f1, Suite::Heart), Card(f2, Suite::Heart)]
+            })
+        }
+    }
+    cards
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Suite {
     Heart = 1,
@@ -33,16 +49,14 @@ pub enum Suite {
     Club = 4,
 }
 
-impl std::str::FromStr for Suite {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.trim() {
-            "h" | "H" => Ok(Self::Heart),
-            "s" | "S" => Ok(Self::Spade),
-            "d" | "D" => Ok(Self::Diamond),
-            "c" | "C" => Ok(Self::Club),
-            _ => Err(()),
+impl Parse for Suite {
+    fn parse(iter: &mut impl Iterator<Item = char>) -> Option<Self> {
+        match iter.next()? {
+            'h' | 'H' => Some(Self::Heart),
+            's' | 'S' => Some(Self::Spade),
+            'd' | 'D' => Some(Self::Diamond),
+            'c' | 'C' => Some(Self::Club),
+            _ => return None,
         }
     }
 }
@@ -107,25 +121,23 @@ impl std::fmt::Display for Face {
     }
 }
 
-impl std::str::FromStr for Face {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.trim() {
-            "a" | "A" | "1" => Ok(Self::Ace),
-            "2" => Ok(Self::Two),
-            "3" => Ok(Self::Three),
-            "4" => Ok(Self::Four),
-            "5" => Ok(Self::Five),
-            "6" => Ok(Self::Six),
-            "7" => Ok(Self::Seven),
-            "8" => Ok(Self::Eight),
-            "9" => Ok(Self::Nine),
-            "t" | "T" => Ok(Self::Ten),
-            "j" | "J" => Ok(Self::Jack),
-            "q" | "Q" => Ok(Self::Queen),
-            "k" | "K" => Ok(Self::King),
-            _ => Err(()),
+impl Parse for Face {
+    fn parse(iter: &mut impl Iterator<Item = char>) -> Option<Self> {
+        match iter.next()? {
+            'a' | 'A' | '1' => Some(Self::Ace),
+            '2' => Some(Self::Two),
+            '3' => Some(Self::Three),
+            '4' => Some(Self::Four),
+            '5' => Some(Self::Five),
+            '6' => Some(Self::Six),
+            '7' => Some(Self::Seven),
+            '8' => Some(Self::Eight),
+            '9' => Some(Self::Nine),
+            't' | 'T' => Some(Self::Ten),
+            'j' | 'J' => Some(Self::Jack),
+            'q' | 'Q' => Some(Self::Queen),
+            'k' | 'K' => Some(Self::King),
+            _ => return None,
         }
     }
 }
@@ -157,25 +169,25 @@ impl std::fmt::Display for Card {
     }
 }
 
-impl std::str::FromStr for Card {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.chars().filter(|c| !c.is_whitespace());
-        let face = String::from(iter.next().ok_or(())?).parse()?;
-        let suite = String::from(iter.next().ok_or(())?).parse()?;
-        Ok(Card(face, suite))
+impl Parse for Card {
+    fn parse(iter: &mut impl Iterator<Item = char>) -> Option<Self> {
+        let face = Face::parse(iter)?;
+        let suite = Suite::parse(iter)?;
+        Some(Card(face, suite))
     }
 }
 
-pub fn parse_cards(input: &str) -> Option<Vec<Card>> {
-    input
-        .chars()
-        .filter(|c| !c.is_whitespace())
-        .array_chunks()
-        .map(|[a, b]| format!("{a}{b}").parse::<Card>())
-        .try_collect()
-        .ok()
+impl Parse for Vec<Card> {
+    fn parse(iter: &mut impl Iterator<Item = char>) -> Option<Self> {
+        let mut buf = vec![];
+        while let Some(c) = Card::parse(iter) {
+            buf.push(c);
+        }
+        if iter.next().is_some() {
+            return None;
+        }
+        Some(buf)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -198,17 +210,9 @@ impl std::fmt::Display for Hand {
     }
 }
 
-impl std::str::FromStr for Hand {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let cards: Vec<_> = s
-            .chars()
-            .filter(|c| !c.is_whitespace())
-            .array_chunks()
-            .map(|[a, b]| format!("{a}{b}").parse::<Card>())
-            .try_collect()?;
-        Ok(Hand::from(cards))
+impl Parse for Hand {
+    fn parse(iter: &mut impl Iterator<Item = char>) -> Option<Self> {
+        Some(Hand(Card::parse_n(iter)?))
     }
 }
 

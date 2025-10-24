@@ -12,5 +12,4 @@ eframe = { version = "0.33", features = ["default"]}
 
 [profile.release]
 opt-level = 3
-lto = true
 

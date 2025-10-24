@@ -205,7 +205,7 @@ impl std::fmt::Display for Hand {
             faces[2],
             faces[3],
             faces[4],
-            crate::rank::Rank::from(self)
+            crate::rank::Ranking::from(self)
         )
     }
 }

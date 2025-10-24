@@ -63,7 +63,7 @@ impl DeckState {
             .combinations(2)
             .filter(|hand| opponent_range.filter_hand([hand[0], hand[1]]))
             .map(|opponent_hand| {
-                Rank::from(best_hand_in(
+                Ranking::from(best_hand_in(
                     opponent_hand.into_iter().chain(self.board.into_iter()),
                 ))
             })
@@ -99,8 +99,8 @@ impl DeckState {
                         .combinations(n)
                     {
                         let this_rank =
-                            Rank::from(best_hand_in(self.into_iter().chain(flop.clone())));
-                        let opponent_rank = Rank::from(best_hand_in(
+                            Ranking::from(best_hand_in(self.into_iter().chain(flop.clone())));
+                        let opponent_rank = Ranking::from(best_hand_in(
                             self.board
                                 .into_iter()
                                 .chain(flop)
@@ -138,9 +138,9 @@ impl DeckState {
                         .combinations(3)
                     {
                         let this_rank =
-                            Rank::from(best_hand_in(flop.clone().into_iter().chain(self.hand)));
+                            Ranking::from(best_hand_in(flop.clone().into_iter().chain(self.hand)));
                         let opponent_rank =
-                            Rank::from(best_hand_in(flop.into_iter().chain(opponent_hand)));
+                            Ranking::from(best_hand_in(flop.into_iter().chain(opponent_hand)));
                         match this_rank.cmp(&opponent_rank) {
                             std::cmp::Ordering::Greater => wins += 1,
                             std::cmp::Ordering::Equal => ties += 1,

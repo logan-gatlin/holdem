@@ -111,15 +111,15 @@ impl IntoIterator for DeckState {
 }
 
 impl DeckState {
-    pub fn current_rank(&self) -> Rank {
+    pub fn current_rank(&self) -> Ranking {
         self.rank_with_hand(self.hand)
     }
 
-    pub fn rank_with_hand(&self, hand: impl IntoIterator<Item = Card>) -> Rank {
+    pub fn rank_with_hand(&self, hand: impl IntoIterator<Item = Card>) -> Ranking {
         assert!(
             self.board != Board::PreFlop,
             "Cannot evaluate hand strength pre-flop"
         );
-        Rank::from(best_hand_in(hand.into_iter().chain(self.board)))
+        Ranking::from(best_hand_in(hand.into_iter().chain(self.board)))
     }
 }

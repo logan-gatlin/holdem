@@ -2,6 +2,7 @@
 #![feature(iter_array_chunks, array_try_from_fn)]
 #[macro_use]
 mod cards;
+mod ai;
 mod eval;
 mod gui;
 mod parse;
@@ -27,7 +28,7 @@ fn main() {
         ..Default::default()
     };
     const MAX_PLAYERS: usize = 9;
-    const INITIAL_BET_BB: f64 = 2.5;
+    const INITIAL_BET_BB: f64 = 2.0;
 
     let mut pocket_cards_input = String::new();
     let mut board_cards_input = String::new();
@@ -48,7 +49,7 @@ fn main() {
     let mut hand_strength: Option<f64> = None;
 
     eframe::run_simple_native("Poker Solver", opts, move |ctx, _frame| {
-        ctx.set_pixels_per_point(1.0);
+        ctx.set_pixels_per_point(2.0);
         egui::CentralPanel::default().show(ctx, |ui| {
             text_entry(ui, "Cards in hand:", &mut pocket_cards_input);
             text_entry(ui, "Cards on board:", &mut board_cards_input);
@@ -128,20 +129,24 @@ fn main() {
                 );
             });
             ui.horizontal(|ui| {
-                ui.label("Modify pot: ");
                 let enabled = pot_input.trim().parse::<usize>().is_ok();
                 let value = pot_input.trim().parse::<usize>().unwrap_or(0);
-                if ui.add_enabled(enabled, egui::Button::new("=")).clicked() {
-                    pot = value;
+                if ui.add_enabled(enabled, egui::Button::new("0")).clicked() {
+                    pot_input.clear();
+                    pot = 0;
                 }
-                if ui.add_enabled(enabled, egui::Button::new("-")).clicked() {
-                    pot = pot.saturating_sub(value);
+                if ui.add(egui::Button::new("bb")).clicked() {
+                    pot_input = format!("{blind}");
+                }
+                if ui.add(egui::Button::new("sb")).clicked() {
+                    pot_input = format!("{}", blind / 2);
+                }
+                if ui.add_enabled(enabled, egui::Button::new("=")).clicked() {
+                    pot_input.clear();
+                    pot = value;
                 }
                 if ui.add_enabled(enabled, egui::Button::new("+")).clicked() {
                     pot += value;
-                }
-                if ui.add(egui::Button::new("blind")).clicked() {
-                    pot_input = format!("{blind}");
                 }
                 if !ui.text_edit_singleline(&mut pot_input).has_focus() && pot_input == "" {
                     pot_input = "0".to_string();
@@ -165,7 +170,6 @@ fn main() {
                 );
             });
             ui.horizontal(|ui| {
-                ui.label("Modify stack: ");
                 let enabled = stack_input.trim().parse::<usize>().is_ok();
                 let value = stack_input.trim().parse::<usize>().unwrap_or(0);
                 if ui.add_enabled(enabled, egui::Button::new("=")).clicked() {
@@ -178,20 +182,15 @@ fn main() {
                     )
                     .clicked()
                 {
+                    stack_input.clear();
                     pot += value;
                     stack = stack.saturating_sub(value);
-                }
-                if ui
-                    .add_enabled(stack != 0, egui::Button::new("all in"))
-                    .clicked()
-                {
-                    pot += stack;
-                    stack = 0;
                 }
                 if ui
                     .add_enabled(pot != 0, egui::Button::new("rake"))
                     .clicked()
                 {
+                    stack_input.clear();
                     stack += pot;
                     pot = 0;
                 }
@@ -268,39 +267,57 @@ fn main() {
                         });
                     }
                 }
-                if expected_value < 0.0 {
-                    ui.label(RichText::new("Fold to this bet amount").color(Color32::RED));
-                } else if expected_value > pot as f64 / 2.0 {
-                    let raise_amount = pot as f64;
-                    ui.label(
-                        RichText::new(if (raise_amount + call_price as f64) > stack as f64 {
-                            "All in".to_string()
-                        } else {
-                            format!("Raise {raise_amount:.0}")
-                        })
-                        .color(Color32::GREEN)
-                        .underline(),
-                    );
-                } else if expected_value > pot as f64 / 4.0 {
-                    let raise_amount = pot as f64 / 2.0;
-                    ui.label(
-                        RichText::new(if (raise_amount + call_price as f64) > stack as f64 {
-                            "All in".to_string()
-                        } else {
-                            format!("Raise {raise_amount:.0}")
-                        })
-                        .color(Color32::GREEN)
-                        .underline(),
-                    );
-                } else {
-                    ui.label(RichText::new("Call this bet amount").color(Color32::GREEN));
-                }
-                ui.separator();
-                ui.label(
-                    RichText::new("Stats for this hand:")
-                        .color(Color32::ORANGE)
-                        .underline(),
+                let (rec, amount) = ai::decide(
+                    position,
+                    hand_strength,
+                    pot_odds,
+                    players_at_table - 1,
+                    call_price,
+                    pot,
+                    stack,
+                    blind,
                 );
+                match rec {
+                    Recommendation::Fold => {
+                        if ui
+                            .button(emphasized("Fold at this call price", Color32::RED))
+                            .clicked()
+                        {
+                            pocket_cards_input.clear();
+                            board_cards_input.clear();
+                            pot = 0;
+                        }
+                    }
+                    Recommendation::Call => {
+                        if ui
+                            .button(emphasized("Call at this price", Color32::GREEN))
+                            .clicked()
+                        {
+                            call_price_input.clear();
+                            pot += call_price;
+                            stack -= call_price;
+                        }
+                    }
+                    Recommendation::Raise => {
+                        if ui
+                            .button(emphasized(format!("Raise {amount}"), Color32::ORANGE))
+                            .clicked()
+                        {
+                            call_price_input.clear();
+                            pot += amount;
+                            stack -= amount;
+                        }
+                    }
+                    Recommendation::AllIn => {
+                        if ui.label(emphasized("All-in", Color32::PURPLE)).clicked() {
+                            call_price_input.clear();
+                            pot += stack;
+                            stack = 0;
+                        }
+                    }
+                };
+                ui.separator();
+                ui.label(emphasized("Stats for this hand:", Color32::ORANGE));
                 ui.horizontal(|ui| {
                     ui.label("Hand strength:");
                     ui.label(

@@ -1,3 +1,5 @@
+use egui::{Color32, RichText};
+
 pub fn labelled(ui: &mut egui::Ui, label: impl Into<egui::WidgetText>, widget: impl egui::Widget) {
     ui.horizontal(|ui| {
         let label = ui.label(label);
@@ -11,4 +13,8 @@ pub fn text_entry(ui: &mut egui::Ui, label: impl Into<egui::WidgetText>, output:
         ui.add(egui::TextEdit::singleline(output))
             .labelled_by(label.id);
     });
+}
+
+pub fn emphasized(str: impl std::fmt::Display, color: Color32) -> RichText {
+    RichText::new(format!("{str}")).color(color).underline()
 }

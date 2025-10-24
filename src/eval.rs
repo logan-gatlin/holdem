@@ -56,7 +56,11 @@ impl DeckState {
 
     /// Strength of the hand given only the cards on the board
     fn board_strength(&self) -> f64 {
-        let opponent_range = HandChart::opponent_expectation();
+        let opponent_range = if self.variance == Variance::Random {
+            HandChart::filled_with(Recommendation::Call)
+        } else {
+            HandChart::opponent_expectation()
+        };
         let this_rank = self.current_rank();
         let (wins, ties, losses) = deck_without(self.clone())
             .into_iter()
@@ -83,7 +87,11 @@ impl DeckState {
         if n == 0 {
             return self.board_strength();
         }
-        let opponent_range = HandChart::opponent_expectation();
+        let opponent_range = if self.variance == Variance::Random {
+            HandChart::filled_with(Recommendation::Call)
+        } else {
+            HandChart::opponent_expectation()
+        };
         //let (mut wins, mut ties, mut losses) = (0, 0, 0);
         let (wins, ties, losses) = deck_without(self.clone())
             .into_iter()
@@ -127,9 +135,14 @@ impl DeckState {
     // Optimized strength calculation considering only unique opening hands
     fn preflop_strength(&self) -> f64 {
         //let opponent_range = HandChart::opponent_expectation();
+        let opponent_range = if self.variance == Variance::Random {
+            HandChart::filled_with(Recommendation::Call)
+        } else {
+            HandChart::opponent_expectation()
+        };
         let (wins, ties, losses) = unique_open_hands()
             .into_par_iter()
-            //.filter(|hand| opponent_range.filter_hand(*hand))
+            .filter(|hand| opponent_range.filter_hand(*hand))
             .fold(
                 || (0, 0, 0),
                 |(mut wins, mut ties, mut losses), opponent_hand| {

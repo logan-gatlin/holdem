@@ -10,22 +10,21 @@ pub fn decide(
     stack: usize,
     blind: usize,
 ) -> (Recommendation, usize) {
+    let hs2 = hand_strength.powi(2);
     let bet_size = if call_price == 0 {
-        (blind * 2).min(stack)
+        (pot.next_multiple_of(blind)).min(stack)
     } else {
-        (call_price * 2).min(stack)
+        ((call_price * 2).next_multiple_of(blind)).min(stack)
     };
-
     let raise_amount = bet_size - call_price;
-
     let fold_ev = 0.0;
     let call_ev = (pot as f64 * hand_strength) - (call_price as f64 * (1.0 - hand_strength));
     // Average pot size after raise
-    let raise_pot = (0..num_opponents).fold(0, |total, calls| {
+    let raise_pot = (1..=num_opponents).fold(0, |total, calls| {
         total + pot + (calls * raise_amount) + bet_size
     }) as f64
         / (num_opponents as f64);
-    let raise_ev = (raise_pot * hand_strength) - (bet_size as f64) * (1.0 - hand_strength);
+    let raise_ev = (raise_pot * hs2) - (bet_size as f64) * (1.0 - hs2);
     if raise_ev > call_ev && raise_ev > fold_ev {
         if bet_size >= stack {
             (Recommendation::AllIn, stack)

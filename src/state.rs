@@ -1,6 +1,13 @@
 use crate::{cards::*, rank::*};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Variance {
+    #[default]
+    Random,
+    Normal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Position {
     #[default]
     BigBlind = 0,
@@ -94,6 +101,8 @@ pub struct DeckState {
     pub board: Board,
     /// Cards currently in my hand
     pub hand: [Card; 2],
+    /// Expected opponent variance
+    pub variance: Variance,
 }
 
 impl IntoIterator for DeckState {

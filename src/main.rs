@@ -35,6 +35,7 @@ fn main() {
     let mut players_in = 5usize;
     let mut players_at_table = 5usize;
     let mut position = Position::default();
+    let mut variance = Variance::Normal;
     let mut state: Option<DeckState> = None;
     let mut last_state: Option<DeckState> = None;
     let mut pot_input = String::new();
@@ -53,6 +54,11 @@ fn main() {
         egui::CentralPanel::default().show(ctx, |ui| {
             text_entry(ui, "Cards in hand:", &mut pocket_cards_input);
             text_entry(ui, "Cards on board:", &mut board_cards_input);
+            ui.horizontal(|ui| {
+                ui.label("Opponent variance:");
+                ui.selectable_value(&mut variance, Variance::Normal, "normal");
+                ui.selectable_value(&mut variance, Variance::Random, "random");
+            });
             // Parse deck state
             if let (Some(pocket_cards), Some(board_cards)) = (
                 Vec::parse(&mut pocket_cards_input.chars().filter(|c| !c.is_whitespace())),
@@ -69,6 +75,7 @@ fn main() {
                         _ => unreachable!(),
                     },
                     hand: [pocket_cards[0], pocket_cards[1]],
+                    variance,
                 });
             } else {
                 ui.colored_label(Color32::RED, "Invalid card inputs");
@@ -174,6 +181,7 @@ fn main() {
                 let value = stack_input.trim().parse::<usize>().unwrap_or(0);
                 if ui.add_enabled(enabled, egui::Button::new("=")).clicked() {
                     stack = value;
+                    stack_input.clear();
                 }
                 if ui
                     .add_enabled(
